@@ -30,11 +30,14 @@ from langchain_community.document_loaders import (
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # ===================== CONFIG =====================
+from dotenv import load_dotenv
+load_dotenv()
+
 UPLOAD_DIR = "uploaded_docs"
 INDEX_FILE = "faiss.index"
 META_FILE = "faiss_meta.json"
 
-MODEL_PATH = r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2"
+MODEL_PATH = os.getenv("MODEL_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 

@@ -1,3 +1,4 @@
+import os
 import torch
 from threading import Thread
 from transformers import (
@@ -10,12 +11,15 @@ from transformers import (
 # 🔥 NEW (QLoRA)
 from peft import PeftModel
 
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # ==============================
 # PATHS
 # ==============================
-MODEL_PATH = r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2"
-LORA_PATH  = r"C:\Users\ABI-AI\Desktop\DocGPT\qlora_train\output2"
+MODEL_PATH = os.getenv("MODEL_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2")
+LORA_PATH  = os.getenv("LORA_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\qlora_train\output2")
 
 
 # ==============================

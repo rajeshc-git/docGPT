@@ -640,7 +640,8 @@
   <input type="file" id="fileAttach" accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png" class="hidden" onchange="handleFileAttach(event)" />
 
   <script>
-    const API_URL = 'http://192.168.7.90:8000/chat';
+    const backendHost = window.location.hostname ? `http://${window.location.hostname}:8000` : 'http://localhost:8000';
+    const API_URL = `${backendHost}/chat`;
     const chatContainer = document.getElementById('chat');
     const input = document.getElementById('message');
     const sendBtn = document.getElementById('send');
@@ -1281,7 +1282,7 @@
     showToast(`Chat exported successfully! (${totalPages} pages)`);
 }
 
-    async function clearKB() { try { await fetch('http://192.168.7.90:8000/clear_kb', {method:'POST'}); showToast('Knowledge base cleared'); } catch(e) { showToast('Server error', 'error'); } }
+    async function clearKB() { try { await fetch(`${backendHost}/clear_kb`, {method:'POST'}); showToast('Knowledge base cleared'); } catch(e) { showToast('Server error', 'error'); } }
     async function uploadFiles() {
        const files = document.getElementById('upload').files;
        if(!files.length) return;
@@ -1291,7 +1292,7 @@
        bar.style.width = '30%';
        const fd = new FormData(); for(let f of files) fd.append('files', f);
        try {
-         const xhr = new XMLHttpRequest(); xhr.open('POST', 'http://192.168.7.90:8000/upload');
+         const xhr = new XMLHttpRequest(); xhr.open('POST', `${backendHost}/upload`);
          xhr.upload.onprogress = (e) => { if(e.lengthComputable) bar.style.width = ((e.loaded/e.total)*100) + '%'; };
          xhr.onload = () => { setTimeout(() => { wrapper.classList.add('hidden'); bar.style.width = '0'; showToast('Files uploaded successfully'); }, 500); };
          xhr.send(fd);

@@ -1,3 +1,4 @@
+import os
 import torch
 from threading import Thread
 from transformers import (
@@ -6,11 +7,13 @@ from transformers import (
     BitsAndBytesConfig,
     TextIteratorStreamer
 )
+from dotenv import load_dotenv
+load_dotenv()
 
 # ==============================
 # MODEL PATH
 # ==============================
-MODEL_PATH = r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2"
+MODEL_PATH = os.getenv("MODEL_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2")
 
 # ==============================
 # LOAD TOKENIZER

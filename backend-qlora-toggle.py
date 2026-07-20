@@ -34,12 +34,15 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 # ===================== CONFIG =====================
+from dotenv import load_dotenv
+load_dotenv()
+
 UPLOAD_DIR = "uploaded_docs"
 INDEX_FILE = "faiss.index"
 META_FILE = "faiss_meta.json"
 
-MODEL_PATH = r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2"
-LORA_PATH  = r"C:\Users\ABI-AI\Desktop\DocGPT\qlora_train\output2"
+MODEL_PATH = os.getenv("MODEL_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2")
+LORA_PATH  = os.getenv("LORA_PATH", r"C:\Users\ABI-AI\Desktop\DocGPT\qlora_train\output2")
 
 USE_QLORA = True   # 🔥 toggle
 

@@ -77,9 +77,25 @@ The suite also contains fine-tuning utilities using PEFT to train your own adapt
 
 ## 🚀 Setup & Installation
 
-### 1. Initialize Virtual Environment
-Create and activate a virtual environment to manage dependencies locally.
+### 1. Clone the Repository
+Clone the repository to your local machine:
+```powershell
+git clone https://github.com/rajeshc-git/docGPT.git
+cd docGPT
+```
 
+### 2. Configure Environment Variables
+Copy the template `.env.example` file to create a `.env` file:
+```powershell
+cp .env.example .env
+```
+Open `.env` and configure your paths:
+- `MODEL_PATH`: Point to your local base model folder (e.g., `C:\Users\ABI-AI\Desktop\DocGPT\hf_models\Mistral-7B-Instruct-v0.2` or simply `hf_models/Mistral-7B-Instruct-v0.2`). Alternatively, specify a Hugging Face hub model ID (e.g., `mistralai/Mistral-7B-Instruct-v0.2`) to download it automatically.
+- `LORA_PATH`: Point to your local QLoRA fine-tuned output adapter folder.
+- `HOST` and `PORT`: Specify server port values (defaults to `0.0.0.0` and `8000`).
+
+### 3. Initialize Virtual Environment
+Create and activate a virtual environment to manage dependencies locally:
 ```powershell
 # Create virtual environment
 python -m venv venv310
@@ -91,17 +107,15 @@ python -m venv venv310
 source venv310/bin/activate
 ```
 
-### 2. Install Dependencies
+### 4. Install Dependencies
 Ensure `pip` is updated, then install the required Python packages:
-
 ```powershell
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. GPU Acceleration (CUDA) Setup
-To enable GPU-accelerated embedding generation, local Mistral inference, and model fine-tuning, install PyTorch with CUDA support.
-
+### 5. GPU Acceleration (CUDA) Setup (Recommended)
+To enable GPU-accelerated embedding generation, local Mistral inference, and model fine-tuning, install PyTorch with CUDA support:
 ```powershell
 # Install CUDA-enabled PyTorch (CUDA 12.8 compatible nightly release)
 python -m pip install --pre torch torchvision torchaudio `
@@ -146,13 +160,7 @@ uvicorn backend-v2-base:app --host 0.0.0.0 --port 8000
 ### Step 2: Open the Frontend Client
 
 1. Open [frontend.html](file:///c:/Users/ABI-AI/Desktop/client%20projects/DocGPT/frontend.html) directly in any web browser.
-2. Configure connection URL:
-   - In `frontend.html` (lines 643, 1284, 1294), the URL points to a local network IP: `http://192.168.7.90:8000`.
-   - If running both the backend and frontend on the same machine, modify line 643 in `frontend.html` to:
-     ```javascript
-     const API_URL = 'http://localhost:8000/chat';
-     ```
-     And change the upload/KB clear endpoints in lines 1284 and 1294 to point to `localhost:8000`.
+2. The client resolves backend endpoints dynamically using your browser's current address (defaulting to `http://localhost:8000` or the corresponding host IP on port 8000). You do not need to modify any code parameters.
 3. Upload documents using the attachment icon and chat with the document base dynamically!
 
 ---
