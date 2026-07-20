@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocGPT • Bro Edition V2.0</title>
+  
+  <!-- Tailwind & Plugins -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            background: '#09090b',
+            primary: '#3b82f6',
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.3s ease-out forwards',
+            'scale-in': 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            scaleIn: { '0%': { transform: 'scale(0.9)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(120, 120, 120, 0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(120, 120, 120, 0.4); }
+
+    /* Markdown Styles */
+    .prose p { margin-bottom: 0.8rem; line-height: 1.6; color: inherit; }
+    .prose pre { background: #111; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; border: 1px solid #333; font-family: 'JetBrains Mono', monospace; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .prose code { background: rgba(255,255,255,0.1); padding: 0.2em 0.4em; border-radius: 0.25rem; font-size: 0.85em; font-family: 'JetBrains Mono', monospace; }
+    .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+    .prose a { color: #60a5fa; text-decoration: none; border-bottom: 1px dashed #60a5fa; transition: all 0.2s; }
+    .prose a:hover { color: #93c5fd; border-bottom-style: solid; }
+    .prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+    .prose th { text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 600; color: #fff; }
+    .prose td { padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+
+    /* Glass Effects */
+    .glass {
+      background: rgba(24, 24, 27, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    /* PURE WHITE Light Mode Glass */
+    .glass-light {
+      background: rgba(255, 255, 255, 0.9); /* High opacity white */
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+    }
+
+    .typing-dot { width: 6px; height: 6px; background: currentColor; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    
+    /* Smooth Transitions for Window Ops */
+    #appContainer { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+   .export-mode * {
+     backdrop-filter: none !important;
+     -webkit-backdrop-filter: none !important;
+     background: white !important;
+     opacity: 1 !important;
+     color: black !important;
+   }
+
+    /* Chat Bubble Styles - Dynamic Theme Support */
+    .dark-bubble-bg {
+      background: transparent;
+      border: none;
+      transition: all 0.3s ease;
+    }
+    
+    .light-bubble-bg {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      transition: all 0.3s ease;
+    }
+    
+    /* Light mode prose overrides */
+    [data-theme="light"] .prose pre { 
+      background: #f8fafc !important; 
+      border-color: #e2e8f0 !important; 
+      color: #334155 !important;
+    }
+    
+    [data-theme="light"] .prose code { 
+      background: rgba(0, 0, 0, 0.06) !important; 
+      color: #334155 !important;
+    }
+    
+    [data-theme="light"] .prose th { 
+      color: #1e293b !important; 
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      background: rgba(0, 0, 0, 0.04) !important;
+    }
+    
+    [data-theme="light"] .prose td { 
+      border-color: rgba(0, 0, 0, 0.05) !important;
+      color: #334155 !important;
+    }
+
+    /* Stunning Sidebar Styles - Dark Mode */
+    .sidebar-dark {
+      background: linear-gradient(180deg, rgba(15, 15, 20, 0.95) 0%, rgba(10, 10, 15, 0.98) 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
+    }
+    
+    .sidebar-dark::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* Stunning Sidebar Styles - Light Mode */
+    .sidebar-light {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 100%);
+      border-right: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04), inset -1px 0 0 rgba(0, 0, 0, 0.02);
+    }
+    
+    .sidebar-light::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 200px;
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Sidebar Header Styles */
+    .sidebar-header-dark {
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .sidebar-header-light {
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(255, 255, 255, 0.5) 100%);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* Logo Animation */
+    .logo-container {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .logo-container:hover {
+      transform: scale(1.05);
+    }
+    
+    .logo-glow {
+      position: absolute;
+      inset: -4px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      border-radius: 14px;
+      opacity: 0;
+      filter: blur(8px);
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+    
+    .logo-container:hover .logo-glow {
+      opacity: 0.6;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    /* Nav Button Styles */
+    .nav-btn-enhanced {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .nav-btn-enhanced::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 0;
+      background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+      border-radius: 0 2px 2px 0;
+      transition: height 0.25s ease;
+    }
+    
+    .nav-btn-enhanced:hover::before {
+      height: 60%;
+    }
+    
+    .nav-btn-enhanced:hover {
+      padding-left: 1rem;
+    }
+    
+    .nav-btn-enhanced i {
+      transition: all 0.25s ease;
+    }
+    
+    .nav-btn-enhanced:hover i {
+      transform: scale(1.15);
+    }
+    
+    /* Icon Styles for Nav */
+    .nav-icon-dark {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+      color: #60a5fa;
+    }
+    
+    .nav-icon-light {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+      color: #3b82f6;
+    }
+
+    /* Footer Status Styles */
+    .footer-dark {
+      background: linear-gradient(180deg, rgba(15, 15, 20, 0.6) 0%, rgba(10, 10, 15, 0.9) 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .footer-light {
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.95) 100%);
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    /* Animated Status Indicator */
+    .status-indicator {
+      position: relative;
+    }
+    
+    .status-indicator::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: #22c55e;
+      border-radius: 50%;
+      animation: status-pulse 2s ease-in-out infinite;
+      z-index: -1;
+    }
+    
+    @keyframes status-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(2); opacity: 0; }
+    }
+
+    /* Section Divider */
+    .section-divider-dark {
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+      height: 1px;
+      margin: 1rem 0;
+    }
+    
+    .section-divider-light {
+      background: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.1) 50%, transparent 100%);
+      height: 1px;
+      margin: 1rem 0;
+    }
+
+    /* ============================================
+       MOBILE RESPONSIVE STYLES
+       ============================================ */
+    
+    /* Mobile Sidebar - Hidden by default, slides in */
+    @media (max-width: 767px) {
+      #sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 280px;
+        transform: translateX(-100%);
+        z-index: 100;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+      }
+      
+      #sidebar.sidebar-open {
+        transform: translateX(0);
+      }
+      
+      /* Mobile overlay when sidebar is open */
+      .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      
+      .sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      
+      /* Smaller touch targets */
+      .prose pre {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+      }
+      
+      .prose table {
+        font-size: 0.8rem;
+        display: block;
+        overflow-x: auto;
+      }
+      
+      .prose th, .prose td {
+        padding: 0.5rem;
+        white-space: nowrap;
+      }
+      
+      /* Ensure text doesn't overflow */
+      .prose p, .prose li {
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+    }
+    
+    /* Small phones */
+    @media (max-width: 380px) {
+      #sidebar {
+        width: 260px;
+      }
+      
+      .prose {
+        font-size: 0.9rem;
+      }
+    }
+    
+    /* Touch-friendly button sizes on mobile */
+    @media (hover: none) and (pointer: coarse) {
+      button {
+        min-height: 44px;
+        min-width: 44px;
+      }
+      
+      .nav-btn {
+        min-height: 52px;
+      }
+    }
+    
+    /* Landscape mobile */
+    @media (max-height: 500px) and (orientation: landscape) {
+      #emptyState {
+        padding-bottom: 1rem;
+      }
+      
+      #emptyState .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+  </style>
+</head>
+
+<body class="bg-background text-zinc-300 h-screen w-screen overflow-hidden flex flex-col items-center justify-center font-sans transition-colors duration-300" data-theme="dark">
+
+  <!-- Ambient Background (Dark Mode Only) -->
+  <div id="ambientGlow" class="fixed inset-0 pointer-events-none z-0 transition-opacity duration-500">
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[600px] md:h-[600px] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(59,130,246,0.15)_0%,rgba(0,0,0,0)_70%)]"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMDMiLz4KPC9zdmc+')] opacity-20"></div>
+  </div>
+  
+  <!-- Mobile Sidebar Overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay\"></div>
+
+  <!-- "Reopen" Screen (For Close Function) -->
+  <div id="reopenScreen" class="hidden absolute inset-0 z-50 flex-col items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
+    <button onclick="reopenApp()" class="flex flex-col items-center gap-4 group cursor-pointer">
+       <div class="w-24 h-24 bg-white rounded-full shadow-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+         <i class="fas fa-power-off text-4xl text-blue-600"></i>
+       </div>
+       <span class="text-white font-medium tracking-wide text-sm bg-black/50 px-4 py-1 rounded-full">System Offline • Click to Reboot</span>
+    </button>
+  </div>
+
+  <!-- Dock Icon (For Minimize Function) -->
+  <div id="dockIcon" onclick="restoreApp()" class="fixed bottom-6 z-50 hidden cursor-pointer group hover:-translate-y-2 transition-all duration-300">
+    <div class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl shadow-xl border-2 border-white/20 flex items-center justify-center">
+      <i class="fas fa-cube text-white text-2xl"></i>
+    </div>
+  </div>
+
+  <!-- Main Application Window -->
+  <div id="appContainer" class="relative w-full h-full md:h-[90vh] md:w-[95vw] md:max-w-6xl md:rounded-3xl glass shadow-2xl flex flex-col md:flex-row overflow-hidden border-zinc-800">
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-72 sidebar-dark relative flex flex-col transition-all duration-300 ease-out z-20 backdrop-blur-xl overflow-hidden shrink-0">
+      <!-- Animated Background Orbs -->
+      <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div class="absolute top-1/2 -right-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+        <div class="absolute -bottom-10 left-1/2 w-36 h-36 bg-indigo-500/8 rounded-full blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+      </div>
+      
+      <!-- Header -->
+      <div class="sidebar-header-dark h-20 flex items-center px-6 shrink-0 relative z-10">
+        <div class="logo-container relative">
+          <div class="logo-glow"></div>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-2 ring-white/10">
+            <i class="fas fa-robot text-white text-lg"></i>
+          </div>
+        </div>
+        <div class="ml-4 flex flex-col">
+          <span id="logoText" class="font-bold text-white tracking-tight text-lg bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text">DocGPT</span>
+          <span class="text-[10px] font-medium text-blue-400/80 uppercase tracking-widest">Bro Edition V2.0</span>
+        </div>
+      </div>
+
+      <!-- Nav Items -->
+      <div class="flex-1 overflow-y-auto px-4 py-6 space-y-1 relative z-10">
+        <div class="flex items-center gap-2 px-3 mb-4">
+          <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+          <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">Actions</span>
+          <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+        </div>
+        
+        <button onclick="document.getElementById('upload').click(); closeSidebarOnMobile();" class="nav-btn nav-btn-enhanced w-full text-left px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-gradient-to-r hover:from-blue-500/10 hover:to-transparent transition-all flex items-center gap-4 group">
+          <span class="w-9 h-9 rounded-lg nav-icon-dark flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </span>
+          <div class="flex flex-col">
+            <span class="font-medium">Upload Docs</span>
+            <span class="text-[10px] text-zinc-600 group-hover:text-zinc-500">Add files to knowledge</span>
+          </div>
+        </button>
+        
+        <button onclick="clearKB(); closeSidebarOnMobile();" class="nav-btn nav-btn-enhanced w-full text-left px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-red-400 hover:bg-gradient-to-r hover:from-red-500/10 hover:to-transparent transition-all flex items-center gap-4 group">
+          <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500/20 to-orange-500/20 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
+            <i class="fas fa-trash-alt"></i>
+          </span>
+          <div class="flex flex-col">
+            <span class="font-medium">Clear Knowledge</span>
+            <span class="text-[10px] text-zinc-600 group-hover:text-red-400/60">Reset memory base</span>
+          </div>
+        </button>
+        
+        <button onclick="exportChat(); closeSidebarOnMobile();" class="nav-btn nav-btn-enhanced w-full text-left px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-emerald-400 hover:bg-gradient-to-r hover:from-emerald-500/10 hover:to-transparent transition-all flex items-center gap-4 group">
+          <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+            <i class="fas fa-download"></i>
+          </span>
+          <div class="flex flex-col">
+            <span class="font-medium">Export Chat</span>
+            <span class="text-[10px] text-zinc-600 group-hover:text-emerald-400/60">Save as PDF</span>
+          </div>
+        </button>
+        
+        <div class="section-divider-dark my-6"></div>
+        
+        <div class="flex items-center gap-2 px-3 mb-4">
+          <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+          <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">System</span>
+          <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+        </div>
+        
+        <button onclick="toggleTheme(); closeSidebarOnMobile();" class="nav-btn nav-btn-enhanced w-full text-left px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-amber-400 hover:bg-gradient-to-r hover:from-amber-500/10 hover:to-transparent transition-all flex items-center gap-4 group">
+          <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform" id="themeIconWrapper">
+            <i id="themeIcon" class="fas fa-moon"></i>
+          </span>
+          <div class="flex flex-col">
+            <span id="themeText" class="font-medium">Dark Mode</span>
+            <span class="text-[10px] text-zinc-600 group-hover:text-amber-400/60" id="themeSubtext">Switch appearance</span>
+          </div>
+        </button>
+        
+        <button onclick="clearChat(); closeSidebarOnMobile();" class="nav-btn nav-btn-enhanced w-full text-left px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-violet-400 hover:bg-gradient-to-r hover:from-violet-500/10 hover:to-transparent transition-all flex items-center gap-4 group">
+          <span class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500/20 to-pink-500/20 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
+            <i class="fas fa-eraser"></i>
+          </span>
+          <div class="flex flex-col">
+            <span class="font-medium">Clear History</span>
+            <span class="text-[10px] text-zinc-600 group-hover:text-violet-400/60">Fresh conversation</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Footer/Status -->
+      <div class="footer-dark p-5 shrink-0 relative z-10" id="footer">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="status-indicator relative">
+              <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/50"></div>
+            </div>
+            <div class="flex flex-col">
+               <span class="text-xs font-medium text-zinc-300" id="statusText">System Online</span>
+               <span class="text-[10px] text-zinc-500" id="sessionTime">0m 0s</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <div class="w-1.5 h-3 rounded-full bg-blue-500/60 animate-pulse"></div>
+            <div class="w-1.5 h-4 rounded-full bg-blue-500/80 animate-pulse" style="animation-delay: 0.2s;"></div>
+            <div class="w-1.5 h-2.5 rounded-full bg-blue-500/60 animate-pulse" style="animation-delay: 0.4s;"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col relative transition-colors duration-300 min-w-0">
+      <!-- Top Bar -->
+      <div class="h-14 border-b border-white/5 flex items-center justify-between px-4 md:px-6 bg-white/5 backdrop-blur-md z-10 shrink-0">
+        <div class="flex items-center gap-3">
+          <button class="md:hidden text-zinc-400 hover:text-white p-2 -ml-2 rounded-lg hover:bg-white/10 transition-colors" onclick="toggleSidebar()">
+            <i class="fas fa-bars text-lg"></i>
+          </button>
+          <h2 id="headerTitle" class="text-sm font-medium text-zinc-200 truncate">New Conversation</h2>
+        </div>
+        
+        <!-- FUNCTIONAL WINDOW CONTROLS (Hidden on mobile) -->
+        <div class="hidden md:flex gap-2 group">
+            <!-- Close Button -->
+            <button onclick="closeApp()" class="w-3.5 h-3.5 rounded-full bg-[#ff5f57] border border-[#e0443e] hover:bg-[#ff5f57]/80 transition-colors flex items-center justify-center group/btn" title="Close">
+                <i class="fas fa-times text-[8px] text-black/60 opacity-0 group-hover/btn:opacity-100"></i>
+            </button>
+            <!-- Minimize Button -->
+            <button onclick="minimizeApp()" class="w-3.5 h-3.5 rounded-full bg-[#febc2e] border border-[#d89e24] hover:bg-[#febc2e]/80 transition-colors flex items-center justify-center group/btn" title="Minimize">
+                <i class="fas fa-minus text-[8px] text-black/60 opacity-0 group-hover/btn:opacity-100"></i>
+            </button>
+            <!-- Maximize Button -->
+            <button onclick="toggleMaximize()" class="w-3.5 h-3.5 rounded-full bg-[#28c840] border border-[#1aab29] hover:bg-[#28c840]/80 transition-colors flex items-center justify-center group/btn" title="Maximize">
+                <i class="fas fa-expand text-[8px] text-black/60 opacity-0 group-hover/btn:opacity-100"></i>
+            </button>
+        </div>
+      </div>
+
+      <!-- Upload Progress -->
+      <div id="uploadProgressWrapper" class="absolute top-14 left-0 w-full h-1 bg-transparent hidden z-20">
+        <div id="uploadProgressBar" class="h-full bg-blue-500 transition-all duration-300 w-0 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+      </div>
+
+      <!-- Messages Area -->
+      <div id="chat" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth">
+        <!-- Empty State -->
+        <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center select-none animate-fade-in pb-12">
+          <div class="w-20 h-20 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl border border-white/10 flex items-center justify-center mb-6 shadow-2xl" id="emptyIcon">
+            <i class="fas fa-bolt text-3xl text-blue-500/80"></i>
+          </div>
+          <h1 id="emptyTitle" class="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">How can I help you?</h1>
+          <p id="emptySub" class="text-zinc-500 max-w-md text-sm">Upload documents or start chatting to explore DocGPT.</p>
+          
+          <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-lg">
+             <button onclick="sendQuickMessage('Summarize the last uploaded document')" class="quick-btn p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-blue-500/30 hover:shadow-lg transition-all text-sm text-left group">
+                <span class="block text-zinc-300 font-medium group-hover:text-blue-400 quick-btn-title">Summarize Docs</span>
+                <span class="text-xs text-zinc-600 group-hover:text-zinc-500 quick-btn-desc">Analyze attached files</span>
+             </button>
+             <button onclick="sendQuickMessage('Write a Python script for data analysis')" class="quick-btn p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 hover:border-blue-500/30 hover:shadow-lg transition-all text-sm text-left group">
+                <span class="block text-zinc-300 font-medium group-hover:text-blue-400 quick-btn-title">Code Assistant</span>
+                <span class="text-xs text-zinc-600 group-hover:text-zinc-500 quick-btn-desc">Generate clean code</span>
+             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Toast Area -->
+      <div id="toastArea" class="absolute bottom-24 right-4 md:right-6 left-4 md:left-auto flex flex-col gap-2 pointer-events-none z-50"></div>
+
+      <!-- Input Area -->
+      <div class="p-4 md:p-6 z-20" id="inputWrapper">
+        <div class="relative max-w-4xl mx-auto">
+          <div id="inputContainer" class="glass rounded-2xl p-1.5 flex items-end gap-2 shadow-2xl ring-1 ring-white/10 focus-within:ring-blue-500/50 transition-all duration-300">
+            <!-- File Attach Button -->
+            <button onclick="attachFile()" class="p-3 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-colors h-[50px] w-[50px] flex items-center justify-center shrink-0 input-btn">
+              <i class="fas fa-paperclip"></i>
+            </button>
+
+            <!-- Text Area -->
+            <textarea 
+              id="message" 
+              rows="1" 
+              placeholder="Ask anything..." 
+              class="w-full bg-transparent border-none text-zinc-100 placeholder-zinc-500 focus:ring-0 resize-none py-3.5 max-h-[150px] text-base leading-relaxed"
+              oninput="autoResize(this)"
+              onkeydown="handleInputKeydown(event)"
+            ></textarea>
+
+            <!-- Send Button -->
+            <button 
+              id="send" 
+              onclick="sendMessage()" 
+              class="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all h-[50px] w-[50px] flex items-center justify-center shrink-0 shadow-lg shadow-blue-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+              <i class="fas fa-arrow-up"></i>
+            </button>
+          </div>
+          <div class="text-center mt-3">
+             <p class="text-[10px] text-zinc-600">AI can make mistakes. Verify important information.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Hidden Inputs -->
+  <input type="file" id="upload" multiple accept=".pdf,.doc,.docx,.txt,.md,.xlsx" class="hidden" onchange="uploadFiles()" />
+  <input type="file" id="fileAttach" accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png" class="hidden" onchange="handleFileAttach(event)" />
+
+  <script>
+    const API_URL = 'http://192.168.7.90:8000/chat';
+    const chatContainer = document.getElementById('chat');
+    const input = document.getElementById('message');
+    const sendBtn = document.getElementById('send');
+    const appContainer = document.getElementById('appContainer');
+    
+    let sessionStartTime = Date.now();
+    let isSending = false;
+    let isMaximized = false;
+
+    // --- Window Control Functions (New Logic) ---
+
+    function toggleMaximize() {
+      isMaximized = !isMaximized;
+      if (isMaximized) {
+        // Remove constrained sizing
+        appContainer.classList.remove('md:h-[90vh]', 'md:w-[95vw]', 'md:max-w-6xl', 'md:rounded-3xl', 'border-zinc-800');
+        // Add fullscreen sizing
+        appContainer.classList.add('w-screen', 'h-screen', 'rounded-none', 'border-none');
+      } else {
+        // Restore constrained sizing
+        appContainer.classList.add('md:h-[90vh]', 'md:w-[95vw]', 'md:max-w-6xl', 'md:rounded-3xl', 'border-zinc-800');
+        appContainer.classList.remove('w-screen', 'h-screen', 'rounded-none', 'border-none');
+      }
+    }
+
+    function minimizeApp() {
+      // Scale down and fade out
+      appContainer.style.transform = 'scale(0.5) translateY(500px)';
+      appContainer.style.opacity = '0';
+      appContainer.style.pointerEvents = 'none'; // prevent clicks while hidden
+      
+      // Show dock icon
+      setTimeout(() => {
+        document.getElementById('dockIcon').classList.remove('hidden');
+        document.getElementById('dockIcon').classList.add('flex', 'animate-scale-in');
+      }, 300);
+    }
+
+    function restoreApp() {
+      // Hide dock icon
+      document.getElementById('dockIcon').classList.add('hidden');
+      document.getElementById('dockIcon').classList.remove('flex');
+
+      // Restore Window
+      appContainer.style.transform = 'scale(1) translateY(0)';
+      appContainer.style.opacity = '1';
+      appContainer.style.pointerEvents = 'all';
+    }
+
+    function closeApp() {
+      // Fade out window
+      appContainer.style.opacity = '0';
+      appContainer.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        appContainer.classList.add('hidden');
+        // Show Reopen Screen
+        const reopen = document.getElementById('reopenScreen');
+        reopen.classList.remove('hidden');
+        reopen.classList.add('flex');
+        // Hide background glow
+        document.getElementById('ambientGlow').style.opacity = '0';
+      }, 300);
+    }
+
+    function reopenApp() {
+      // Hide Reopen Screen
+      const reopen = document.getElementById('reopenScreen');
+      reopen.classList.add('hidden');
+      reopen.classList.remove('flex');
+      // Show Window
+      appContainer.classList.remove('hidden');
+      setTimeout(() => {
+        appContainer.style.opacity = '1';
+        appContainer.style.transform = 'scale(1)';
+        document.getElementById('ambientGlow').style.opacity = '1';
+      }, 10);
+    }
+
+    function toggleSidebar() {
+       const sb = document.getElementById('sidebar');
+       const overlay = document.getElementById('sidebarOverlay');
+       const isOpen = sb.classList.contains('sidebar-open');
+       
+       if (isOpen) {
+         sb.classList.remove('sidebar-open');
+         overlay.classList.remove('active');
+         document.body.style.overflow = '';
+       } else {
+         sb.classList.add('sidebar-open');
+         overlay.classList.add('active');
+         document.body.style.overflow = 'hidden';
+       }
+    }
+    
+    // Close sidebar when clicking outside (on overlay)
+    function setupSidebarCloseHandlers() {
+      const overlay = document.getElementById('sidebarOverlay');
+      const sidebar = document.getElementById('sidebar');
+      
+      // Click outside to close
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('sidebar-open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+      });
+      
+      // Swipe to close (left swipe)
+      let touchStartX = 0;
+      let touchEndX = 0;
+      
+      sidebar.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, false);
+      
+      sidebar.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+      }, false);
+      
+      function handleSwipe() {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+        
+        // Swiped left (closing gesture)
+        if (diff > swipeThreshold) {
+          sidebar.classList.remove('sidebar-open');
+          overlay.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      }
+    }
+    
+    // Initialize swipe handlers when page loads
+    document.addEventListener('DOMContentLoaded', setupSidebarCloseHandlers);
+    
+    // Close sidebar when clicking a nav button on mobile
+    function closeSidebarOnMobile() {
+      if (window.innerWidth < 768) {
+        const sb = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sb.classList.remove('sidebar-open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+
+    // --- Theme Logic (Updated for Pure White) ---
+
+    // Function to update all chat messages when theme changes
+    function updateChatTheme(isLight) {
+      const chatContainer = document.getElementById('chat');
+      if (!chatContainer) return;
+      
+      // Update all message containers
+      const allMessages = chatContainer.querySelectorAll('.flex.w-full.animate-fade-in');
+      
+      allMessages.forEach(messageDiv => {
+        const isUserMessage = messageDiv.classList.contains('justify-end');
+        
+        // Find the bubble container (the div with rounded classes)
+        const bubbleContainer = messageDiv.querySelector('[class*="rounded-2xl"]');
+        if (!bubbleContainer) return;
+        
+        // Find the prose content div
+        const proseDiv = bubbleContainer.querySelector('.prose');
+        
+        // Find the label span (You/DocGPT)
+        const labelSpan = messageDiv.querySelector('.text-\\[10px\\]');
+        
+        if (!isUserMessage) {
+          // Assistant messages - update bubble background and text colors
+          if (isLight) {
+            // Switch to light mode colors
+            bubbleContainer.classList.remove('text-zinc-100', 'dark-bubble-bg');
+            bubbleContainer.classList.add('text-zinc-900', 'light-bubble-bg', 'bg-gray-100');
+            if (proseDiv) {
+              proseDiv.classList.remove('prose-invert');
+            }
+          } else {
+            // Switch to dark mode colors
+            bubbleContainer.classList.remove('text-zinc-900', 'light-bubble-bg', 'bg-gray-100');
+            bubbleContainer.classList.add('text-zinc-100', 'dark-bubble-bg');
+            if (proseDiv) {
+              proseDiv.classList.add('prose-invert');
+            }
+          }
+        }
+        
+        // Update label color
+        if (labelSpan) {
+          if (isLight) {
+            labelSpan.classList.remove('text-zinc-500');
+            labelSpan.classList.add('text-zinc-400');
+          } else {
+            labelSpan.classList.remove('text-zinc-400');
+            labelSpan.classList.add('text-zinc-500');
+          }
+        }
+      });
+      
+      // Update the chat container background
+      if (isLight) {
+        chatContainer.classList.remove('bg-zinc-900/20');
+        chatContainer.classList.add('bg-gray-50/50');
+      } else {
+        chatContainer.classList.remove('bg-gray-50/50');
+        chatContainer.classList.add('bg-zinc-900/20');
+      }
+    }
+
+    function toggleTheme() {
+      const body = document.body;
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      body.setAttribute('data-theme', newTheme);
+      
+      // Elements to toggle
+      const container = document.getElementById('appContainer');
+      const sidebar = document.getElementById('sidebar');
+      const icon = document.getElementById('themeIcon');
+      const text = document.getElementById('themeText');
+      const inputContainer = document.getElementById('inputContainer');
+      const msgInput = document.getElementById('message');
+      const logoText = document.getElementById('logoText');
+      const headerTitle = document.getElementById('headerTitle');
+      const emptyIcon = document.getElementById('emptyIcon');
+      const emptyTitle = document.getElementById('emptyTitle');
+      const footer = document.getElementById('footer');
+      const darkBubbleBg = document.querySelectorAll('.dark-bubble-bg');
+      const lightBubbleBg = document.querySelectorAll('.light-bubble-bg');
+      if(newTheme === 'light') {
+        darkBubbleBg.forEach(bubble => bubble.classList.replace('text-zinc-100', 'text-zinc-900'));
+        darkBubbleBg.forEach(bubble => bubble.classList.replace('dark-bubble-bg', 'light-bubble-bg'));
+         // Switch to Light Mode (Pure White)
+         body.classList.remove('bg-background', 'text-zinc-300');
+         body.classList.add('bg-white', 'text-zinc-800');
+         document.body.classList.add('light-mode-active');
+         
+         // Hide dark ambient glow
+         document.getElementById('ambientGlow').classList.add('hidden');
+
+         // Container: Glass Light
+         container.classList.remove('glass', 'border-zinc-800');
+         container.classList.add('glass-light', 'border-gray-200');
+         
+         // Sidebar: Stunning Light Mode
+         sidebar.classList.remove('sidebar-dark');
+         sidebar.classList.add('sidebar-light');
+         sidebar.querySelector('.sidebar-header-dark')?.classList.replace('sidebar-header-dark', 'sidebar-header-light');
+         document.querySelectorAll('.nav-icon-dark').forEach(el => el.classList.replace('nav-icon-dark', 'nav-icon-light'));
+         document.querySelectorAll('.section-divider-dark').forEach(el => el.classList.replace('section-divider-dark', 'section-divider-light'));
+         document.querySelector('.footer-dark')?.classList.replace('footer-dark', 'footer-light');
+         document.getElementById('statusText')?.classList.replace('text-zinc-300', 'text-zinc-700');
+         
+         // Text Colors
+         icon.className = 'fas fa-sun w-4 text-center';
+         text.textContent = "Light Mode";
+         logoText.classList.replace('text-white', 'text-blue-600');
+         headerTitle.classList.replace('text-zinc-200', 'text-zinc-800');
+         
+         // Nav Buttons
+         document.querySelectorAll('.nav-btn').forEach(btn => {
+           btn.classList.replace('text-zinc-400', 'text-zinc-600');
+           btn.classList.replace('hover:text-white', 'hover:text-black');
+           btn.classList.replace('hover:bg-white/5', 'hover:bg-black/5');
+         });
+
+         // Empty State
+         emptyIcon.classList.remove('bg-gradient-to-br', 'from-zinc-800', 'to-zinc-900', 'border-white/10');
+         emptyIcon.classList.add('bg-blue-50', 'border-blue-100');
+         emptyTitle.classList.replace('text-white', 'text-zinc-900');
+
+         // footer
+         footer.classList.replace('border-white/5', 'border-gray-200');
+         footer.classList.replace('bg-zinc-900/30', 'bg-white/5');
+         
+         // Quick Actions
+         document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.classList.remove('bg-white/5', 'border-white/5', 'hover:bg-white/10');
+            btn.classList.add('bg-white', 'border-gray-200', 'hover:bg-gray-50', 'shadow-sm');
+         });
+         document.querySelectorAll('.quick-btn-title').forEach(el => el.classList.replace('text-zinc-300', 'text-zinc-800'));
+
+         // Input Area
+         inputContainer.classList.remove('glass', 'ring-white/10');
+         inputContainer.classList.add('bg-white', 'ring-gray-200', 'shadow-xl');
+         msgInput.classList.remove('text-zinc-100', 'placeholder-zinc-500');
+         msgInput.classList.add('text-zinc-900', 'placeholder-zinc-400');
+         document.querySelectorAll('.input-btn').forEach(b => b.classList.replace('text-zinc-400', 'text-zinc-500'));
+         
+         // Update all existing chat messages
+         updateChatTheme(true);
+      } else {
+        lightBubbleBg.forEach(bubble => bubble.classList.replace('text-zinc-900', 'text-zinc-100'));
+        lightBubbleBg.forEach(bubble => bubble.classList.replace('light-bubble-bg', 'dark-bubble-bg'));
+         // Switch Back to Dark Mode
+         body.classList.add('bg-background', 'text-zinc-300');
+         body.classList.remove('bg-white', 'text-zinc-800');
+         document.body.classList.remove('light-mode-active');
+
+         document.getElementById('ambientGlow').classList.remove('hidden');
+
+         container.classList.add('glass', 'border-zinc-800');
+         container.classList.remove('glass-light', 'border-gray-200');
+
+         // Sidebar: Stunning Dark Mode
+         sidebar.classList.remove('sidebar-light');
+         sidebar.classList.add('sidebar-dark');
+         sidebar.querySelector('.sidebar-header-light')?.classList.replace('sidebar-header-light', 'sidebar-header-dark');
+         document.querySelectorAll('.nav-icon-light').forEach(el => el.classList.replace('nav-icon-light', 'nav-icon-dark'));
+         document.querySelectorAll('.section-divider-light').forEach(el => el.classList.replace('section-divider-light', 'section-divider-dark'));
+         document.querySelector('.footer-light')?.classList.replace('footer-light', 'footer-dark');
+         document.getElementById('statusText')?.classList.replace('text-zinc-700', 'text-zinc-300');
+
+         icon.className = 'fas fa-moon w-4 text-center';
+         text.textContent = "Dark Mode";
+         logoText.classList.replace('text-blue-600', 'text-white');
+         headerTitle.classList.replace('text-zinc-800', 'text-zinc-200');
+
+         document.querySelectorAll('.nav-btn').forEach(btn => {
+           btn.classList.replace('text-zinc-600', 'text-zinc-400');
+           btn.classList.replace('hover:text-black', 'hover:text-white');
+           btn.classList.replace('hover:bg-black/5', 'hover:bg-white/5');
+         });
+
+         emptyIcon.classList.add('bg-gradient-to-br', 'from-zinc-800', 'to-zinc-900', 'border-white/10');
+         emptyIcon.classList.remove('bg-blue-50', 'border-blue-100');
+         emptyTitle.classList.replace('text-zinc-900', 'text-white');
+         footer.classList.replace('border-gray-200', 'border-white/5');
+         footer.classList.replace('bg-white/5', 'bg-zinc-900/30');
+
+         document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.classList.add('bg-white/5', 'border-white/5', 'hover:bg-white/10');
+            btn.classList.remove('bg-white', 'border-gray-200', 'hover:bg-gray-50', 'shadow-sm');
+         });
+         document.querySelectorAll('.quick-btn-title').forEach(el => el.classList.replace('text-zinc-800', 'text-zinc-300'));
+
+         inputContainer.classList.add('glass', 'ring-white/10');
+         inputContainer.classList.remove('bg-white', 'ring-gray-200', 'shadow-xl');
+         msgInput.classList.add('text-zinc-100', 'placeholder-zinc-500');
+         msgInput.classList.remove('text-zinc-900', 'placeholder-zinc-400');
+         document.querySelectorAll('.input-btn').forEach(b => b.classList.replace('text-zinc-500', 'text-zinc-400'));
+         
+         // Update all existing chat messages
+         updateChatTheme(false);
+      }
+     
+    }
+
+    // --- Standard Logic (Preserved) ---
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    }
+
+    function handleInputKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function updateSessionTime() {
+      const now = new Date();
+      const diff = Math.floor((now - sessionStartTime) / 1000);
+      const m = Math.floor(diff / 60);
+      const s = diff % 60;
+      document.getElementById('sessionTime').textContent = `${m}m ${s}s`;
+    }
+    setInterval(updateSessionTime, 1000);
+
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      // Adapt toast color to theme
+      const isLight = document.body.getAttribute('data-theme') === 'light';
+      const bg = isLight ? 'bg-white text-zinc-800 border-gray-200' : 'glass text-blue-200 border-blue-500/50';
+      
+      toast.className = `${bg} px-4 py-3 rounded-xl border text-sm shadow-lg flex items-center gap-3 animate-slide-up pointer-events-auto`;
+      toast.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-circle text-red-500' : 'fa-check-circle text-blue-500'}"></i> <span>${message}</span>`;
+      
+      const area = document.getElementById('toastArea');
+      area.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function appendMessage(role, content, id) {
+      document.getElementById('emptyState').style.display = 'none';
+      const isLight = document.body.getAttribute('data-theme') === 'light';
+      
+      const div = document.createElement('div');
+      div.className = `flex w-full animate-fade-in ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+      
+      const isUser = role === 'user';
+      
+      // Dynamic bubble classes
+      let bubbleColor;
+      if (isUser) {
+          bubbleColor = 'bg-blue-600 text-white';
+      } else {
+          bubbleColor = isLight 
+            ? 'text-zinc-900' 
+            : 'text-zinc-100 dark-bubble-bg';
+      }
+      
+      const rounded = isUser ? 'rounded-2xl rounded-tr-sm' : 'rounded-2xl rounded-tl-sm';
+      
+      div.innerHTML = `
+        <div class="flex flex-col max-w-[85%] md:max-w-[75%] gap-1">
+          <div class="flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'} px-1">
+             <span class="text-[10px] font-medium uppercase tracking-wider ${isLight ? 'text-zinc-400' : 'text-zinc-500'}">${isUser ? 'You' : 'DocGPT'}</span>
+          </div>
+          <div class="${bubbleColor} ${rounded} px-5 py-3.5 overflow-hidden group relative">
+            <div id="${id}" class="prose ${isLight ? '' : 'prose-invert'} max-w-none text-sm md:text-base leading-relaxed">${content}</div>
+          </div>
+        </div>
+      `;
+      
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      return div;
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text || isSending) return;
+      
+      isSending = true;
+      sendBtn.disabled = true;
+      sendBtn.classList.add('opacity-50');
+      input.value = '';
+      autoResize(input);
+      
+      const msgId = Date.now();
+      appendMessage('user', text.replace(/\n/g, '<br>'), `user-${msgId}`);
+      
+      const assistantId = `assistant-${msgId}`;
+      const loadingHTML = `<div class="flex gap-1 py-1 h-6 items-center"><div class="typing-dot text-gray-400"></div><div class="typing-dot text-gray-400"></div><div class="typing-dot text-gray-400"></div></div>`;
+      const messageDiv = appendMessage('assistant', loadingHTML, assistantId);
+      const contentDiv = document.getElementById(assistantId);
+      
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let firstChunk = true;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n\n');
+          for (const line of lines) {
+             const trimmed = line.trim();
+             if (trimmed.startsWith('data: ')) {
+               const jsonStr = trimmed.replace('data: ', '');
+               if (jsonStr === '[DONE]') continue;
+               try {
+                 const data = JSON.parse(jsonStr);
+                 if (data.content) {
+                   if (firstChunk) { contentDiv.innerHTML = ''; firstChunk = false; }
+                   fullText += data.content;
+                   contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(fullText));
+                   chatContainer.scrollTop = chatContainer.scrollHeight;
+                 }
+               } catch (e) { console.error(e); }
+             }
+          }
+        }
+      } catch (err) {
+        contentDiv.innerHTML = `<span class="text-red-400">Error: ${err.message}</span>`;
+      } finally {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('opacity-50');
+        input.focus();
+      }
+    }
+
+    function sendQuickMessage(text) { input.value = text; sendMessage(); }
+    function attachFile() { document.getElementById('fileAttach').click(); }
+    function handleFileAttach(e) { if(e.target.files.length) showToast(`Attached: ${e.target.files[0].name}`); }
+    function clearChat(){if(confirm('Clear history?')){[...chatContainer.children].forEach(c=>c.id!=='emptyState'&&c.remove());document.getElementById('emptyState').style.display='flex';}}
+    async function exportChat() {
+    const { jsPDF } = window.jspdf;
+
+    showToast("Generating PDF...");
+
+    const chat = document.getElementById("chat");
+    
+    // --------------------------------------------------
+    // 🔥 1. SAVE ORIGINAL STYLES & EXPAND FOR FULL CAPTURE
+    // --------------------------------------------------
+    const originalStyles = {
+        height: chat.style.height,
+        maxHeight: chat.style.maxHeight,
+        overflow: chat.style.overflow,
+        position: chat.style.position
+    };
+    
+    // Get the full scrollable height
+    const fullScrollHeight = chat.scrollHeight;
+    
+    // Temporarily expand chat to show ALL content
+    chat.style.height = fullScrollHeight + 'px';
+    chat.style.maxHeight = 'none';
+    chat.style.overflow = 'visible';
+    
+    // --------------------------------------------------
+    // 🔥 2. FLASH ANIMATION (JS ONLY — NO CSS NEEDED)
+    // --------------------------------------------------
+    const flash = document.createElement("div");
+    flash.style.position = "fixed";
+    flash.style.inset = "0";
+    flash.style.background = "white";
+    flash.style.opacity = "0";
+    flash.style.pointerEvents = "none";
+    flash.style.zIndex = "999999";
+    flash.style.transition = "opacity 180ms ease";
+    document.body.appendChild(flash);
+
+    // trigger flash
+    requestAnimationFrame(() => {
+        flash.style.opacity = "1";
+        setTimeout(() => {
+            flash.style.opacity = "0";
+            setTimeout(() => flash.remove(), 200);
+        }, 120);
+    });
+
+    // --------------------------------------------------
+    // 🔥 3. SOLID MODE (REMOVE GLASS EFFECTS)
+    // --------------------------------------------------
+    chat.classList.add("export-mode");
+    await new Promise(r => setTimeout(r, 300)); // ensures repaint with expanded content
+
+    // --------------------------------------------------
+    // 🔥 4. CAPTURE FULL SCREENSHOT
+    // --------------------------------------------------
+    const canvas = await html2canvas(chat, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        scrollY: -window.scrollY,
+        windowHeight: fullScrollHeight,
+        height: fullScrollHeight
+    });
+
+    chat.classList.remove("export-mode");
+    
+    // Restore original styles
+    chat.style.height = originalStyles.height;
+    chat.style.maxHeight = originalStyles.maxHeight;
+    chat.style.overflow = originalStyles.overflow;
+    chat.style.position = originalStyles.position;
+
+    // --------------------------------------------------
+    // 🔥 5. CREATE MULTI-PAGE PDF (PROFESSIONAL STYLE)
+    // --------------------------------------------------
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Add margins for professional look
+    const margin = 10;
+    const contentWidth = pageWidth - (margin * 2);
+    const contentHeight = pageHeight - (margin * 2);
+
+    // Calculate scaled image dimensions
+    const imgWidth = contentWidth;
+    const imgHeight = (canvas.height * contentWidth) / canvas.width;
+    
+    // Calculate how many pages we need
+    const totalPages = Math.ceil(imgHeight / contentHeight);
+    
+    // Create a temporary canvas for slicing
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Calculate the height of each slice in the original canvas
+    const sliceHeight = (canvas.height / imgHeight) * contentHeight;
+    
+    for (let page = 0; page < totalPages; page++) {
+        if (page > 0) {
+            pdf.addPage();
+        }
+        
+        // Calculate source coordinates for this page
+        const sourceY = page * sliceHeight;
+        const sourceHeight = Math.min(sliceHeight, canvas.height - sourceY);
+        
+        // Set up temp canvas for this slice
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = sourceHeight;
+        
+        // Draw the slice
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tempCtx.drawImage(
+            canvas,
+            0, sourceY,                          // source x, y
+            canvas.width, sourceHeight,          // source width, height
+            0, 0,                                // dest x, y
+            canvas.width, sourceHeight           // dest width, height
+        );
+        
+        // Add this slice to PDF
+        const sliceData = tempCanvas.toDataURL("image/png");
+        const sliceImgHeight = (sourceHeight * contentWidth) / canvas.width;
+        
+        pdf.addImage(sliceData, "PNG", margin, margin, contentWidth, sliceImgHeight);
+        
+        // Add page number footer
+        pdf.setFontSize(8);
+        pdf.setTextColor(150);
+        pdf.text(`Page ${page + 1} of ${totalPages}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+    }
+
+    pdf.save("DocGPT_Chat_History.pdf");
+
+    showToast(`Chat exported successfully! (${totalPages} pages)`);
+}
+
+    async function clearKB() { try { await fetch('http://192.168.7.90:8000/clear_kb', {method:'POST'}); showToast('Knowledge base cleared'); } catch(e) { showToast('Server error', 'error'); } }
+    async function uploadFiles() {
+       const files = document.getElementById('upload').files;
+       if(!files.length) return;
+       const bar = document.getElementById('uploadProgressBar');
+       const wrapper = document.getElementById('uploadProgressWrapper');
+       wrapper.classList.remove('hidden');
+       bar.style.width = '30%';
+       const fd = new FormData(); for(let f of files) fd.append('files', f);
+       try {
+         const xhr = new XMLHttpRequest(); xhr.open('POST', 'http://192.168.7.90:8000/upload');
+         xhr.upload.onprogress = (e) => { if(e.lengthComputable) bar.style.width = ((e.loaded/e.total)*100) + '%'; };
+         xhr.onload = () => { setTimeout(() => { wrapper.classList.add('hidden'); bar.style.width = '0'; showToast('Files uploaded successfully'); }, 500); };
+         xhr.send(fd);
+       } catch(e) { wrapper.classList.add('hidden'); showToast('Upload error', 'error'); }
+    }
+  </script>
+</body>
+</html>

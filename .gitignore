@@ -1,0 +1,32 @@
+# Virtual environments
+venv310/
+venv/
+.venv/
+env/
+.env
+
+# Large Local Models (Hugging Face)
+hf_models/
+
+# QLoRA training checkpoints and output adapters
+qlora_train/output/
+qlora_train/output2/
+
+# Vector database indexes
+faiss.index
+faiss_meta.json
+
+# User Uploaded Documents (ignore contents but keep directory structure)
+uploaded_docs/*
+!uploaded_docs/.gitkeep
+
+# Python cache & compiler files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS-specific files
+desktop.ini
+.DS_Store
+Thumbs.db
+*.log
